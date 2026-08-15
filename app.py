@@ -290,10 +290,14 @@ status = runner.status
 running_now = runner.is_running()
 st.markdown(f"**{'🟢 運行中' if running_now else '🔴 已停止'}**")
 
-meta_col1, meta_col2, meta_col3 = st.columns(3)
-meta_col1.metric("啟動時間", status["started_at"] or "-")
-meta_col2.metric("最近檢查", status["last_check_at"] or "-")
-meta_col3.metric("累計通知次數", status["notify_count"])
+meta_col1, meta_col2 = st.columns(2)
+with meta_col1:
+    st.caption("啟動時間")
+    st.write(status["started_at"] or "-")
+with meta_col2:
+    st.caption("最近檢查")
+    st.write(status["last_check_at"] or "-")
+st.metric("累計通知次數", status["notify_count"])
 
 if status["last_notify_at"]:
     st.caption(f"最近一次通知：{status['last_notify_at']}")
