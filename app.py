@@ -243,9 +243,9 @@ if is_running:
 st.subheader("控制")
 col1, col2 = st.columns(2)
 with col1:
-    start_clicked = st.button("▶️ 開始監控", use_container_width=True, disabled=is_running, type="primary")
+    start_clicked = st.button("▶️ 開始監控", width="stretch", disabled=is_running, type="primary")
 with col2:
-    stop_clicked = st.button("⏹️ 停止監控", use_container_width=True, disabled=not is_running)
+    stop_clicked = st.button("⏹️ 停止監控", width="stretch", disabled=not is_running)
 
 if start_clicked:
     if not symbols:
@@ -277,7 +277,7 @@ if status["error"]:
     st.warning(f"最近一次錯誤：{status['error']}（會自動重試，不影響整體運行）")
 
 if status["last_results"]:
-    st.dataframe(status["last_results"], use_container_width=True, hide_index=True)
+    st.dataframe(status["last_results"], width="stretch", hide_index=True)
 else:
     st.caption("尚無檢查紀錄")
 
