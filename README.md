@@ -1,25 +1,19 @@
----
-title: Binance Price Alert
-emoji: 🚨
-colorFrom: yellow
-colorTo: red
-sdk: streamlit
-app_file: app.py
-pinned: false
----
-
 # Binance Price Alert
 
-監控 Binance Futures 幣種的短時間漲跌幅，超過門檻就發 Telegram 通知。
+監控 Binance Futures 幣種的短時間漲跌幅，超過門檻就發 Telegram 通知。部署在 [Streamlit Community Cloud](https://share.streamlit.io)。
 
-## 部署前準備
+## 部署步驟
 
-到這個 Space 的 **Settings → Variables and secrets → New secret**，新增（類型選 **Secret**）：
+1. 把 `app.py`、`requirements.txt` push 到 GitHub repo（可以放進 `frank-trading-toolkit`，也可以另開新 repo）
+2. 到 https://share.streamlit.io -> **New app**，選這個 repo / branch，**Main file path** 填 `app.py`（若放在子資料夾，例如 `alert/app.py`，就填完整路徑）
+3. 點 App 右下角 **⋮ → Settings → Secrets**，用 TOML 格式貼上：
 
-- `TELEGRAM_BOT_TOKEN`
-- `TELEGRAM_CHAT_ID`
+   ```toml
+   TELEGRAM_BOT_TOKEN = "你的 token"
+   TELEGRAM_CHAT_ID = "你的 chat id"
+   ```
 
-存好後重新整理頁面即可使用。
+4. 存檔後選 **Reboot app** 讓 Secrets 生效
 
 ## 使用方式
 
@@ -30,5 +24,6 @@ pinned: false
 
 ## 注意事項
 
-- 免費方案的 Space 閒置一段時間會自動休眠，休眠後背景監控也會停止；若要 24 小時不中斷運行，需要升級成 always-on 的付費方案，或另外設定保活機制（例如外部排程定時 ping Space）。
-- 每次 Space 重建（例如改了程式碼重新 push）背景執行緒都會重置，需要重新按一次「開始監控」。
+- Streamlit Community Cloud 的免費 app 閒置一段時間會進入休眠（顯示 "Zzz"），有人打開頁面才會被喚醒重跑；休眠期間背景監控會跟著停掉，喚醒後需要重新按「開始監控」。如果要接近 24 小時不中斷，得自己想辦法保持有人/有東西定期access（例如外部排程定時打開 app 網址），或改用其他常駐主機。
+- 每次 app reboot（不論是你手動 reboot、改了程式碼重新 push、還是被喚醒重跑）背景執行緒都會重置，都要重新按一次「開始監控」。
+- 多個瀏覽器分頁 / 多人同時打開同一個 app 網址，看到的是同一個背景執行緒狀態（因為用 `st.cache_resource` 共用），不會各自開一份。

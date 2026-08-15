@@ -1,20 +1,22 @@
 """
-Binance Price Alert - Hugging Face Spaces (Streamlit) 版本
+Binance Price Alert - Streamlit Community Cloud 版本
 
 功能：
 - 幣種 / 漲跌幅門檻 / 檢查間隔可在網頁上設定
-- Telegram Bot Token / Chat ID 從環境變數讀取（在 HF Space 的 Settings -> Variables and secrets 設定）
+- Telegram Bot Token / Chat ID 從 st.secrets 讀取（App 的 Settings -> Secrets 設定）
 - 開始 / 停止按鈕控制背景監控執行緒
 - 即時顯示運行狀態、最近一次檢查結果、累計通知次數
 
-部署到 Hugging Face Spaces：
-1. 建立新 Space，SDK 選 Streamlit
-2. 把這個檔案改名 app.py，連同 requirements.txt 放進 repo
-3. Settings -> Variables and secrets -> New secret，新增：
-     TELEGRAM_BOT_TOKEN
-     TELEGRAM_CHAT_ID
-   （選 Secret，不要選 Variable，才不會被公開看到）
-4. 存檔後 Space 會自動重建
+部署到 Streamlit Community Cloud (share.streamlit.io)：
+1. 把 app.py、requirements.txt push 到 GitHub repo（可以放進現有的
+   frank-trading-toolkit，或另開一個 repo 都可以）
+2. https://share.streamlit.io -> New app，選這個 repo / branch，
+   Main file path 填 app.py（如果放在子資料夾，例如 alert/app.py，這裡就填完整路徑）
+3. Deploy 之前或之後，進 App 右下角 ⋮ -> Settings -> Secrets，
+   用 TOML 格式貼上：
+     TELEGRAM_BOT_TOKEN = "你的 token"
+     TELEGRAM_CHAT_ID = "你的 chat id"
+   存檔後選 Reboot app 讓設定生效
 """
 
 import os
@@ -36,9 +38,17 @@ KLINE_INTERVAL = Client.KLINE_INTERVAL_3MINUTE
 
 st.set_page_config(page_title="Binance Price Alert", page_icon="🚨", layout="centered")
 
-# Telegram Token / Chat ID：從 HF Space Secrets 讀取，不寫死在程式碼裡
-TELEGRAM_BOT_TOKEN = os.environ.get("TELEGRAM_BOT_TOKEN", "")
-TELEGRAM_CHAT_ID = os.environ.get("TELEGRAM_CHAT_ID", "")
+# Telegram Token / Chat ID：從 Streamlit Community Cloud 的 Secrets 讀取，不寫死在程式碼裡
+# (App 設定 -> Settings -> Secrets，用 TOML 格式填 TELEGRAM_BOT_TOKEN / TELEGRAM_CHAT_ID)
+def _get_secret(key: str) -> str:
+    try:
+        return st.secrets[key]
+    except (KeyError, FileNotFoundError):
+        return os.environ.get(key, "")
+
+
+TELEGRAM_BOT_TOKEN = _get_secret("TELEGRAM_BOT_TOKEN")
+TELEGRAM_CHAT_ID = _get_secret("TELEGRAM_CHAT_ID")
 
 
 def send_telegram_notify(bot_token: str, chat_id: str, message: str) -> bool:
@@ -185,7 +195,7 @@ st.title("🚨 Binance Price Alert")
 if not TELEGRAM_BOT_TOKEN or not TELEGRAM_CHAT_ID:
     st.error(
         "尚未偵測到 TELEGRAM_BOT_TOKEN / TELEGRAM_CHAT_ID。\n\n"
-        "請到這個 Space 的 Settings → Variables and secrets 新增兩個 Secret 後重新整理頁面。"
+        "請到 Streamlit Community Cloud 的 App 右下角 ⋮ → Settings → Secrets 新增後 Reboot app。"
     )
 
 all_symbols = fetch_futures_symbols()
