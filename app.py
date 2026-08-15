@@ -39,7 +39,23 @@ DEFAULT_THRESHOLD = 0.35
 DEFAULT_INTERVAL = 3
 NOTIFY_COOLDOWN_SECONDS = 1200
 RETRY_DELAY_SECONDS = 3
-KLINE_INTERVAL = Client.KLINE_INTERVAL_3MINUTE  # 現貨、Futures 共用同一組 KLINE_INTERVAL_* 常數
+DEFAULT_KLINE_LABEL = "3分鐘"
+
+# K 棒週期選項：顯示用文字 -> Client.KLINE_INTERVAL_* 常數
+KLINE_INTERVAL_OPTIONS = {
+    "1分鐘": Client.KLINE_INTERVAL_1MINUTE,
+    "3分鐘": Client.KLINE_INTERVAL_3MINUTE,
+    "5分鐘": Client.KLINE_INTERVAL_5MINUTE,
+    "15分鐘": Client.KLINE_INTERVAL_15MINUTE,
+    "30分鐘": Client.KLINE_INTERVAL_30MINUTE,
+    "1小時": Client.KLINE_INTERVAL_1HOUR,
+    "2小時": Client.KLINE_INTERVAL_2HOUR,
+    "4小時": Client.KLINE_INTERVAL_4HOUR,
+    "6小時": Client.KLINE_INTERVAL_6HOUR,
+    "8小時": Client.KLINE_INTERVAL_8HOUR,
+    "12小時": Client.KLINE_INTERVAL_12HOUR,
+    "1天": Client.KLINE_INTERVAL_1DAY,
+}
 
 st.set_page_config(page_title="Binance Price Alert", page_icon="🚨", layout="centered")
 
@@ -116,7 +132,7 @@ class AlertRunner:
     def is_running(self) -> bool:
         return self.thread is not None and self.thread.is_alive()
 
-    def start(self, symbols, threshold, interval_seconds, bot_token, chat_id) -> bool:
+    def start(self, symbols, threshold, interval_seconds, kline_interval, bot_token, chat_id) -> bool:
         if self.is_running():
             return False
         self.stop_event.clear()
@@ -128,7 +144,7 @@ class AlertRunner:
             )
         self.thread = threading.Thread(
             target=self._run_loop,
-            args=(symbols, threshold, interval_seconds, bot_token, chat_id),
+            args=(symbols, threshold, interval_seconds, kline_interval, bot_token, chat_id),
             daemon=True,
         )
         self.thread.start()
@@ -146,7 +162,7 @@ class AlertRunner:
             time.sleep(step)
             elapsed += step
 
-    def _run_loop(self, symbols, threshold, interval_seconds, bot_token, chat_id) -> None:
+    def _run_loop(self, symbols, threshold, interval_seconds, kline_interval, bot_token, chat_id) -> None:
         client = get_binance_client()
         while not self.stop_event.is_set():
             try:
@@ -155,7 +171,7 @@ class AlertRunner:
                 for symbol in symbols:
                     if self.stop_event.is_set():
                         break
-                    row, message = check_price(client, symbol, KLINE_INTERVAL, threshold)
+                    row, message = check_price(client, symbol, kline_interval, threshold)
                     results.append(row)
                     if message and send_telegram_notify(bot_token, chat_id, message):
                         notify_this_round += 1
@@ -237,6 +253,15 @@ interval = st.number_input(
     disabled=is_running,
     key="interval_input",
 )
+kline_label = st.selectbox(
+    "K 棒週期 KLINE_INTERVAL",
+    options=list(KLINE_INTERVAL_OPTIONS.keys()),
+    index=list(KLINE_INTERVAL_OPTIONS.keys()).index(DEFAULT_KLINE_LABEL),
+    disabled=is_running,
+    key="kline_interval_select",
+    help="用哪一根 K 棒的漲跌幅去跟門檻比較，例如選 3 分鐘就是比較最近兩根 3 分鐘 K 棒的收盤價",
+)
+kline_interval = KLINE_INTERVAL_OPTIONS[kline_label]
 if is_running:
     st.caption("⚠️ 運行中無法修改參數，請先按停止")
 
@@ -253,7 +278,7 @@ if start_clicked:
     elif not TELEGRAM_BOT_TOKEN or not TELEGRAM_CHAT_ID:
         st.error("缺少 Telegram Token / Chat ID，無法啟動")
     else:
-        runner.start(symbols, threshold, int(interval), TELEGRAM_BOT_TOKEN, TELEGRAM_CHAT_ID)
+        runner.start(symbols, threshold, int(interval), kline_interval, TELEGRAM_BOT_TOKEN, TELEGRAM_CHAT_ID)
         st.rerun()
 
 if stop_clicked:
