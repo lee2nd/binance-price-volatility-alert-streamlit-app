@@ -4,8 +4,8 @@
 
 ## 部署步驟
 
-1. 把 `app.py`、`requirements.txt` push 到 GitHub repo（可以放進 `frank-trading-toolkit`，也可以另開新 repo）
-2. 到 https://share.streamlit.io -> **New app**，選這個 repo / branch，**Main file path** 填 `app.py`（若放在子資料夾，例如 `alert/app.py`，就填完整路徑）
+1. 把 `app.py`、`requirements.txt` push 到 GitHub repo
+2. 到 https://share.streamlit.io -> **New app**，選這個 repo / branch，**Main file path** 填 `app.py`
 3. 點 App 右下角 **⋮ → Settings → Secrets**，用 TOML 格式貼上：
 
    ```toml
