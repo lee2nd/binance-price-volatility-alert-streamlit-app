@@ -1,11 +1,16 @@
 """
-Binance Price Alert - Streamlit Community Cloud 版本
+Binance Price Alert - Streamlit Community Cloud 版本 (Binance.US 現貨)
 
 功能：
 - 幣種 / 漲跌幅門檻 / 檢查間隔可在網頁上設定
 - Telegram Bot Token / Chat ID 從 st.secrets 讀取（App 的 Settings -> Secrets 設定）
 - 開始 / 停止按鈕控制背景監控執行緒
 - 即時顯示運行狀態、最近一次檢查結果、累計通知次數
+
+資料來源改打 Binance.US（現貨）而不是 Binance 主站的 Futures：
+Binance 主站對美國地區 IP 有存取限制，Streamlit Community Cloud 的伺服器在美國會被擋；
+Binance.US 是給美國用戶用的合規站台，不會擋美國 IP，但只有現貨、沒有永續合約/Futures，
+可選幣種也比主站少。
 
 部署到 Streamlit Community Cloud (share.streamlit.io)：
 1. 把 app.py、requirements.txt push 到 GitHub repo（可以放進現有的
@@ -34,7 +39,7 @@ DEFAULT_THRESHOLD = 0.35
 DEFAULT_INTERVAL = 3
 NOTIFY_COOLDOWN_SECONDS = 1200
 RETRY_DELAY_SECONDS = 3
-KLINE_INTERVAL = Client.KLINE_INTERVAL_3MINUTE
+KLINE_INTERVAL = Client.KLINE_INTERVAL_3MINUTE  # 現貨、Futures 共用同一組 KLINE_INTERVAL_* 常數
 
 st.set_page_config(page_title="Binance Price Alert", page_icon="🚨", layout="centered")
 
@@ -51,6 +56,12 @@ TELEGRAM_BOT_TOKEN = _get_secret("TELEGRAM_BOT_TOKEN")
 TELEGRAM_CHAT_ID = _get_secret("TELEGRAM_CHAT_ID")
 
 
+def get_binance_client() -> Client:
+    """建立打 Binance.US 的 Client（tld='us' 會改連 api.binance.us），
+    不會被美國地區 IP 擋，也就不需要 proxy 了"""
+    return Client(tld="us")
+
+
 def send_telegram_notify(bot_token: str, chat_id: str, message: str) -> bool:
     url = f"https://api.telegram.org/bot{bot_token}/sendMessage"
     payload = {"chat_id": chat_id, "text": f"🚨 Binance Price Notify\n{message}"}
@@ -64,8 +75,8 @@ def send_telegram_notify(bot_token: str, chat_id: str, message: str) -> bool:
 
 
 def check_price(client: Client, symbol: str, interval: str, threshold_percent: float):
-    """回傳 (顯示用 dict, 若觸發門檻則為警示訊息字串否則 None)"""
-    klines = client.futures_klines(symbol=symbol, interval=interval, limit=2)
+    """回傳 (顯示用 dict, 若觸發門檻則為警示訊息字串否則 None)。用 Binance.US 現貨 K 棒"""
+    klines = client.get_klines(symbol=symbol, interval=interval, limit=2)
     prev_close = float(klines[0][4])
     curr_close = float(klines[-1][4])
     change_percent = round(((curr_close - prev_close) / prev_close) * 100, 3)
@@ -136,7 +147,7 @@ class AlertRunner:
             elapsed += step
 
     def _run_loop(self, symbols, threshold, interval_seconds, bot_token, chat_id) -> None:
-        client = Client()
+        client = get_binance_client()
         while not self.stop_event.is_set():
             try:
                 results = []
@@ -169,17 +180,15 @@ def get_runner() -> AlertRunner:
     return AlertRunner()
 
 
-@st.cache_data(ttl=3600, show_spinner="正在取得 Binance Futures 幣種列表...")
-def fetch_futures_symbols() -> list[str]:
+@st.cache_data(ttl=3600, show_spinner="正在取得 Binance.US 幣種列表...")
+def fetch_spot_symbols() -> list[str]:
     try:
-        client = Client()
-        info = client.futures_exchange_info()
+        client = get_binance_client()
+        info = client.get_exchange_info()
         symbols = sorted(
             s["symbol"]
             for s in info["symbols"]
-            if s.get("status") == "TRADING"
-            and s.get("contractType") == "PERPETUAL"
-            and s.get("quoteAsset") == "USDT"
+            if s.get("status") == "TRADING" and s.get("quoteAsset") == "USDT"
         )
         return symbols or DEFAULT_SYMBOLS
     except Exception as error:  # noqa: BLE001
@@ -198,7 +207,7 @@ if not TELEGRAM_BOT_TOKEN or not TELEGRAM_CHAT_ID:
         "請到 Streamlit Community Cloud 的 App 右下角 ⋮ → Settings → Secrets 新增後 Reboot app。"
     )
 
-all_symbols = fetch_futures_symbols()
+all_symbols = fetch_spot_symbols()
 is_running = runner.is_running()
 
 st.subheader("參數設定")
