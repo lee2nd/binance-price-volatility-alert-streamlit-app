@@ -4,8 +4,8 @@
 
 ## 部署步驟
 
-1. 把 `app.py`、`requirements.txt` push 到 GitHub repo
-2. 到 https://share.streamlit.io -> **New app**，選這個 repo / branch，**Main file path** 填 `app.py`
+1. 把 `app.py`、`requirements.txt` push 到 GitHub repo（可以放進 `frank-trading-toolkit`，也可以另開新 repo）
+2. 到 https://share.streamlit.io -> **New app**，選這個 repo / branch，**Main file path** 填 `app.py`（若放在子資料夾，例如 `alert/app.py`，就填完整路徑）
 3. 點 App 右下角 **⋮ → Settings → Secrets**，用 TOML 格式貼上：
 
    ```toml
@@ -36,6 +36,24 @@ IP，會遇到 `Service unavailable from a restricted location` 這種錯誤。B
 2. 按「開始監控」，背景執行緒會持續檢查並在觸發門檻時發 Telegram 通知
 3. 頁面下方「狀態」區塊每 2 秒自動更新，可看到目前是否運行中、最近一次檢查結果、累計通知次數
 4. 按「停止監控」即可暫停
+
+## Keep Awake（自動保持喚醒）
+
+`.github/workflows/keep-streamlit-awake.yml` 這個 GitHub Actions 會自動幫 app 保持醒著：
+
+- **排程觸發**：cron `0 */6 * * *`，每天 UTC 0 / 6 / 12 / 18 點各自動跑一次（台灣時間約
+  8:00 / 14:00 / 20:00 / 02:00），比 12 小時的休眠門檻留緩衝，不用手動操作
+- **手動觸發**：也支援 `workflow_dispatch`，可以在 GitHub 的 Actions 分頁隨時手動點
+  **Run workflow** 立即跑一次（例如剛部署完想馬上測試）
+- **運作方式**：用 headless 瀏覽器（Playwright）真的造訪一次 app 網址；如果去的時候
+  app 剛好已經睡著了，會自動點「Yes, get this app back up!」把它喚醒
+- **需要的設定**：repo 的 **Settings → Secrets and variables → Actions** 要有一個
+  secret `STREAMLIT_APP_URL`，值是你的 app 網址
+- **喚醒後還是要手動按開始監控**：這個 Actions 只能保持 app 醒著、或把睡著的 app 叫醒，
+  但不管是哪一種情況，Streamlit process 重啟後背景監控執行緒的狀態都會歸零，
+  還是要有人進去點一次「開始監控」，這步沒辦法自動化
+- **GitHub 的排程限制**：如果 repo 連續 60 天都沒有任何 commit，GitHub 會自動停用
+  `schedule` 排程觸發（`workflow_dispatch` 手動觸發不受影響），要留意 repo 別放太久沒動
 
 ## 注意事項
 
