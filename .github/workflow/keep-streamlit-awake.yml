@@ -1,0 +1,29 @@
+name: Keep Streamlit app awake
+
+on:
+  schedule:
+    # 每 6 小時跑一次（UTC 時間），比 12 小時的休眠門檻留一點緩衝
+    - cron: "0 */6 * * *"
+  workflow_dispatch: {}  # 也可以手動在 Actions 頁面點 "Run workflow" 立即跑一次
+
+jobs:
+  ping:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install dependencies
+        run: |
+          pip install playwright
+          playwright install --with-deps chromium
+
+      - name: Visit app to keep it awake
+        env:
+          STREAMLIT_APP_URL: ${{ secrets.STREAMLIT_APP_URL }}
+        run: python scripts/keep_streamlit_awake.py
