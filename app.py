@@ -35,7 +35,7 @@ from binance.client import Client
 
 # ========== 預設值 ==========
 DEFAULT_SYMBOLS = ["SOLUSDT"]
-DEFAULT_THRESHOLD = 1
+DEFAULT_THRESHOLD = 1.0
 DEFAULT_INTERVAL = 3
 NOTIFY_COOLDOWN_SECONDS = 1200
 RETRY_DELAY_SECONDS = 3
@@ -238,7 +238,7 @@ threshold = st.number_input(
     "漲跌幅門檻 DROP_THRESHOLD_PERCENT (%)",
     min_value=0.01,
     max_value=20.0,
-    value=DEFAULT_THRESHOLD,
+    value=float(DEFAULT_THRESHOLD),
     step=0.05,
     format="%.2f",
     disabled=is_running,
