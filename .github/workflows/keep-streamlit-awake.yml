@@ -1,10 +1,11 @@
 name: Keep Streamlit app awake
 
+# 不使用 GitHub 的 `schedule` 排程：repo 超過 60 天沒有 commit 活動時，GitHub 會自動停用
+# schedule 觸發且需要手動到 Actions 頁面重新 Enable，很容易悄悄失效而不自知。
+# 改由外部排程服務（cron-job.org）每 6 小時呼叫 GitHub REST API 來觸發 workflow_dispatch，
+# 不受那個 60 天自動停用規則影響。
 on:
-  schedule:
-    # 每 6 小時跑一次（UTC 時間），比 12 小時的休眠門檻留一點緩衝
-    - cron: "0 */6 * * *"
-  workflow_dispatch: {}  # 也可以手動在 Actions 頁面點 "Run workflow" 立即跑一次
+  workflow_dispatch: {}  # 也可以手動在 Actions 頁面點 "Run workflow"，或由外部排程服務（如 cron-job.org）呼叫 API 觸發
 
 jobs:
   ping:
